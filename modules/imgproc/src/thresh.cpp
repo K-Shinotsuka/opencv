@@ -46,8 +46,16 @@
 namespace cv
 {
 
+template <typename SrcType>
 static void
-thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
+thresh( const Mat& _src, Mat& _dst, SrcType thresh, SrcType maxval, int type )
+{
+    CV_Error( CV_StsUnsupportedFormat, "" );
+}
+
+template <>
+static void
+thresh( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
 {
     int i, j, j_scalar = 0;
     uchar tab[256];
@@ -385,8 +393,9 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
 }
 
 
+template <>
 static void
-thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
+thresh( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
 {
     int i, j;
     Size roi = _src.size();
@@ -653,7 +662,7 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
     }
 }
 
-
+template <>
 static void
 thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
 {
@@ -904,6 +913,7 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
     }
 }
 
+template <>
 static void
 thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
 {
@@ -1175,10 +1185,11 @@ getThreshVal_Triangle_8u( const Mat& _src )
     return thresh;
 }
 
+template <typename SrcType>
 class ThresholdRunner : public ParallelLoopBody
 {
 public:
-    ThresholdRunner(Mat _src, Mat _dst, double _thresh, double _maxval, int _thresholdType)
+    ThresholdRunner(Mat _src, Mat _dst, SrcType _thresh, SrcType _maxval, int _thresholdType)
     {
         src = _src;
         dst = _dst;
@@ -1196,30 +1207,15 @@ public:
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);
 
-        if (srcStripe.depth() == CV_8U)
-        {
-            thresh_8u( srcStripe, dstStripe, (uchar)thresh, (uchar)maxval, thresholdType );
-        }
-        else if( srcStripe.depth() == CV_16S )
-        {
-            thresh_16s( srcStripe, dstStripe, (short)thresh, (short)maxval, thresholdType );
-        }
-        else if( srcStripe.depth() == CV_32F )
-        {
-            thresh_32f( srcStripe, dstStripe, (float)thresh, (float)maxval, thresholdType );
-        }
-        else if( srcStripe.depth() == CV_64F )
-        {
-            thresh_64f(srcStripe, dstStripe, thresh, maxval, thresholdType);
-        }
+        thresh<SrcType>( srcStripe, dstStripe, thresh, maxval, thresholdType );
     }
 
 private:
     Mat src;
     Mat dst;
 
-    double thresh;
-    double maxval;
+    SrcType thresh;
+    SrcType maxval;
     int thresholdType;
 };
 
@@ -1320,8 +1316,9 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 src.copyTo(dst);
             return thresh;
         }
-        thresh = ithresh;
-        maxval = imaxval;
+        parallel_for_(Range(0, dst.rows),
+                      ThresholdRunner(src, dst, (uchar)ithresh, (uchar)imaxval, type),
+                      dst.total()/(double)(1<<16));
     }
     else if( src.depth() == CV_16S )
     {
@@ -1347,19 +1344,23 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 src.copyTo(dst);
             return thresh;
         }
-        thresh = ithresh;
-        maxval = imaxval;
+        parallel_for_(Range(0, dst.rows),
+                      ThresholdRunner(src, dst, (short)ithresh, (short)imaxval, type),
+                      dst.total()/(double)(1<<16));
     }
-    else if( src.depth() == CV_32F )
-        ;
-    else if( src.depth() == CV_64F )
-        ;
+    else if( src.depth() == CV_32F ) {
+        parallel_for_(Range(0, dst.rows),
+                      ThresholdRunner(src, dst, (float)thresh, (float)maxval, type),
+                      dst.total()/(double)(1<<16));
+    }
+    else if( src.depth() == CV_64F ) {
+        parallel_for_(Range(0, dst.rows),
+                      ThresholdRunner(src, dst, thresh, maxval, type),
+                      dst.total()/(double)(1<<16));
+    }
     else
         CV_Error( CV_StsUnsupportedFormat, "" );
 
-    parallel_for_(Range(0, dst.rows),
-                  ThresholdRunner(src, dst, thresh, maxval, type),
-                  dst.total()/(double)(1<<16));
     return thresh;
 }
 
