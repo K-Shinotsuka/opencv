@@ -1941,6 +1941,16 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
 
 //! @}
 
+inline v_float32x4 v_andnot(const v_float32x4& a, const v_float32x4& b)
+{
+    v_float32x4 c;
+    for( int i = 0; i < n; i++ )
+    {
+        c.s[i] = !(a.s[i] & b.s[i]);
+    }
+    return c;
+}
+
 //! @name Check SIMD support
 //! @{
 //! @brief Check CPU capability of SIMD operation

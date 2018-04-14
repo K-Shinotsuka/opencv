@@ -1284,6 +1284,11 @@ inline v_float16x4 v_cvt_f16(const v_float32x4& a)
 }
 #endif
 
+inline v_float32x4 v_andnot(const v_float32x4& a, const v_float32x4& b)
+{
+    return v_float32x4((float32x4_t)vbicq_s32((int32x4_t)a.val, (int32x4_t)b.val));
+}
+
 //! @name Check SIMD support
 //! @{
 //! @brief Check CPU capability of SIMD operation
