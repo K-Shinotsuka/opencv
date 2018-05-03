@@ -1251,6 +1251,78 @@ inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec&
     vst4q_##suffix(ptr, v); \
 }
 
+inline void v_load_deinterleave_expand(const uchar* ptr, v_uint32x4& a, v_uint32x4& b, v_uint32x4& c,
+                                       v_uint32x4& d, v_uint32x4& e, v_uint32x4& f)
+{
+    uint8x8x3_t v = vld3_u8(*(unsigned*)ptr);
+
+    v_uint16x8 tmp[6];
+    v_expand(v.val[0], tmp[0], tmp[1]);
+    v_expand(v.val[1], tmp[2], tmp[3]);
+    v_expand(v.val[2], tmp[4], tmp[5]);
+
+    v_expand(tmp[0], a, b);
+    v_expand(tmp[2], c, d);
+    v_expand(tmp[4], e, f);
+}
+
+inline void v_load_deinterleave_expand(const uchar* ptr, v_uint32x4& a, v_uint32x4& b, v_uint32x4& c, v_uint32x4& d,
+                                       v_uint32x4& e, v_uint32x4& f, v_uint32x4& g, v_uint32x4& h)
+{
+    uint8x8x4_t v = vld4_u8(*(unsigned*)ptr);
+
+    v_uint16x8 tmp[8];
+    v_expand(v.val[0], tmp[0], tmp[1]);
+    v_expand(v.val[1], tmp[2], tmp[3]);
+    v_expand(v.val[2], tmp[4], tmp[5]);
+    v_expand(v.val[3], tmp[6], tmp[7]);
+
+    v_expand(tmp[0], a, b);
+    v_expand(tmp[2], c, d);
+    v_expand(tmp[4], e, f);
+    v_expand(tmp[6], g, h);
+}
+
+inline void v_pack_interleave_store(uchar* ptr, const v_uint32x4& v_src0, const v_uint32x4& v_src1, const v_uint32x4& v_src2,
+                                    const v_uint32x4& v_src3, const v_uint32x4& v_src4, const v_uint32x4& v_src5)
+{
+    v_uint16x8 v_src01 = v_u32pack(v_src0, v_src1);
+    v_uint16x8 v_src23 = v_u32pack(v_src2, v_src3);
+    v_uint16x8 v_src45 = v_u32pack(v_src4, v_src5);
+
+    v_uint8x8 v_src0101 = v_u16pack(v_src01, v_src01);
+    v_uint8x8 v_src2323 = v_u16pack(v_src23, v_src23);
+    v_uint8x8 v_src4523 = v_u16pack(v_src45, v_src45);
+
+    uint8x8x3_t v;
+    v.val[0] = v_src0101.val;
+    v.val[1] = v_src2323.val;
+    v.val[2] = v_src4545.val;
+    vst3_u8(ptr, v);
+}
+
+inline void v_pack_interleave_store(uchar* ptr, const v_uint32x4& v_src0, const v_uint32x4& v_src1,
+                                    const v_uint32x4& v_src2, const v_uint32x4& v_src3, const v_uint32x4& v_src4,
+                                    const v_uint32x4& v_src5, const v_uint32x4& v_src6, const v_uint32x4& v_src7)
+{
+    v_uint16x8 v_src01 = v_u32pack(v_src0, v_src1);
+    v_uint16x8 v_src23 = v_u32pack(v_src2, v_src3);
+    v_uint16x8 v_src45 = v_u32pack(v_src4, v_src5);
+    v_uint16x8 v_src67 = v_u32pack(v_src6, v_src7);
+
+    v_uint8x8 v_src0101 = v_u16pack(v_src01, v_src01);
+    v_uint8x8 v_src2323 = v_u16pack(v_src23, v_src23);
+    v_uint8x8 v_src4545 = v_u16pack(v_src45, v_src45);
+    v_uint8x8 v_src6767 = v_u16pack(v_src67, v_src67);
+
+    uint8x8x4_t v;
+    v.val[0] = v_src0101.val;
+    v.val[1] = v_src2323.val;
+    v.val[2] = v_src4545.val;
+    v.val[3] = v_src6767.val;
+    vst4_u8(ptr, v);
+}
+
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint8x16, uchar, u8)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(int8x16, schar, s8)
 OPENCV_HAL_IMPL_NEON_INTERLEAVED(uint16x8, ushort, u16)
