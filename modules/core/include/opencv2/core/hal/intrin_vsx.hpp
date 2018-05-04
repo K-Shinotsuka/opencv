@@ -393,27 +393,6 @@ inline void v_recombine(const _Tpvec& a, const _Tpvec& b, _Tpvec& c, _Tpvec& d)
     d.val = vec_mergesql(a.val, b.val);
 }
 
-inline void v_load_deinterleave_expand(const uchar* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c,
-                                       v_float32x4& d, v_float32x4& e, v_float32x4& f)
-{
-}
-
-inline void v_load_deinterleave_expand(const uchar* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c, v_float32x4& d,
-                                       v_float32x4& e, v_float32x4& f, v_float32x4& g, v_float32x4& h)
-{
-}
-
-inline void v_pack_interleave_store(uchar* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1, const v_float32x4& v_src2,
-                                    const v_float32x4& v_src3, const v_float32x4& v_src4, const v_float32x4& v_src5)
-{
-}
-
-inline void v_pack_interleave_store(uchar* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1,
-                                    const v_float32x4& v_src2, const v_float32x4& v_src3, const v_float32x4& v_src4,
-                                    const v_float32x4& v_src5, const v_float32x4& v_src6, const v_float32x4& v_src7)
-{
-}
-
 ////////// Arithmetic, bitwise and comparison operations /////////
 
 /* Element-wise binary and unary operations */

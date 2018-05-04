@@ -1579,33 +1579,37 @@ inline void v_load_deinterleave(const unsigned* ptr, v_uint32x4& a, v_uint32x4& 
     v_transpose4x4(u0, u1, u2, u3, a, b, c, d);
 }
 
-inline void v_deinterleave(v_float32x4& src0, v_float32x4& src1, v_float32x4& src2)
+inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c)
 {
-    __m128 at12 = _mm_shuffle_ps(src1.val, src2.val, _MM_SHUFFLE(0, 1, 0, 2));
-    __m128 bt01 = _mm_shuffle_ps(src0.val, src1.val, _MM_SHUFFLE(0, 0, 0, 1));
-    __m128 bt12 = _mm_shuffle_ps(src1.val, src2.val, _MM_SHUFFLE(0, 2, 0, 3));
-    __m128 ct01 = _mm_shuffle_ps(src0.val, src1.val, _MM_SHUFFLE(0, 1, 0, 2));
+    __m128 t0 = _mm_loadu_ps(ptr + 0);
+    __m128 t1 = _mm_loadu_ps(ptr + 4);
+    __m128 t2 = _mm_loadu_ps(ptr + 8);
 
-    src0.val = _mm_shuffle_ps(src0.val, at12    , _MM_SHUFFLE(2, 0, 3, 0));
-    src1.val = _mm_shuffle_ps(bt01    , bt12    , _MM_SHUFFLE(2, 0, 2, 0));
-    src2.val = _mm_shuffle_ps(ct01    , src2.val, _MM_SHUFFLE(3, 0, 2, 0));
+    __m128 at12 = _mm_shuffle_ps(t1, t2, _MM_SHUFFLE(0, 1, 0, 2));
+    a.val = _mm_shuffle_ps(t0, at12, _MM_SHUFFLE(2, 0, 3, 0));
+
+    __m128 bt01 = _mm_shuffle_ps(t0, t1, _MM_SHUFFLE(0, 0, 0, 1));
+    __m128 bt12 = _mm_shuffle_ps(t1, t2, _MM_SHUFFLE(0, 2, 0, 3));
+    b.val = _mm_shuffle_ps(bt01, bt12, _MM_SHUFFLE(2, 0, 2, 0));
+
+    __m128 ct01 = _mm_shuffle_ps(t0, t1, _MM_SHUFFLE(0, 1, 0, 2));
+    c.val = _mm_shuffle_ps(ct01, t2, _MM_SHUFFLE(3, 0, 2, 0));
 }
 
-inline void v_load_deinterleave(const float* ptr, v_float32x4& src0, v_float32x4& src1, v_float32x4& src2)
+inline void v_load_deinterleave(const float* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c, v_float32x4& d)
 {
-    src0.val = _mm_loadu_ps(ptr +  0);
-    src1.val = _mm_loadu_ps(ptr +  4);
-    src2.val = _mm_loadu_ps(ptr +  8);
-    v_deinterleave(src0, src1, src2);
-}
-
-inline void v_load_deinterleave(const float* ptr, v_float32x4& src0, v_float32x4& src1, v_float32x4& src2, v_float32x4& src3)
-{
-    src0.val = _mm_loadu_ps(ptr +  0);
-    src1.val = _mm_loadu_ps(ptr +  4);
-    src2.val = _mm_loadu_ps(ptr +  8);
-    src3.val = _mm_loadu_ps(ptr + 12);
-    v_transpose4x4(src0, src1, src2, src3, src0, src1, src2, src3);
+    __m128 t0 = _mm_loadu_ps(ptr +  0);
+    __m128 t1 = _mm_loadu_ps(ptr +  4);
+    __m128 t2 = _mm_loadu_ps(ptr +  8);
+    __m128 t3 = _mm_loadu_ps(ptr + 12);
+    __m128 t02lo = _mm_unpacklo_ps(t0, t2);
+    __m128 t13lo = _mm_unpacklo_ps(t1, t3);
+    __m128 t02hi = _mm_unpackhi_ps(t0, t2);
+    __m128 t13hi = _mm_unpackhi_ps(t1, t3);
+    a.val = _mm_unpacklo_ps(t02lo, t13lo);
+    b.val = _mm_unpackhi_ps(t02lo, t13lo);
+    c.val = _mm_unpacklo_ps(t02hi, t13hi);
+    d.val = _mm_unpackhi_ps(t02hi, t13hi);
 }
 
 inline void v_load_deinterleave(const uint64 *ptr, v_uint64x2& a, v_uint64x2& b, v_uint64x2& c)
@@ -1669,84 +1673,6 @@ inline void v_load_deinterleave(const ushort*ptr, v_uint16x8& a, v_uint16x8& b)
     v_load_deinterleave((const short*)ptr, sa, sb);
     a = v_reinterpret_as_u16(sa);
     b = v_reinterpret_as_u16(sb);
-}
-
-inline void v_load_deinterleave_expand(const uchar* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c,
-                                       v_float32x4& d, v_float32x4& e, v_float32x4& f)
-{
-    __m128i u0 = _mm_loadu_si128((const __m128i*) ptr      );
-    __m128i u1 = _mm_loadl_epi64((const __m128i*)(ptr + 16));
-
-    __m128i z = _mm_setzero_si128();
-#if CV_SSSE3
-    __m128i v0 = _mm_shuffle_epi8(u0, 0x0f0c0906030080808080808080808080);
-    __m128i v1 = _mm_shuffle_epi8(u1, 0x80808080808080808080808080800502);
-    __m128i v2 = _mm_shuffle_epi8(u0, 0x0d0a0704018080808080808080808080);
-    __m128i v3 = _mm_shuffle_epi8(u1, 0x80808080808080808080808080060300);
-    __m128i v4 = _mm_shuffle_epi8(u0, 0x0e0b0805028080808080808080808080);
-    __m128i v5 = _mm_shuffle_epi8(u1, 0x80808080808080808080808080070401);
-
-    __m128i w0 = _mm_aligner_epi8(v0, v1, 10);
-    __m128i w1 = _mm_aligner_epi8(v2, v3, 11);
-    __m128i w2 = _mm_aligner_epi8(v4, v5, 11);
-
-    __m128i x0 = _mm_unpacklo_epi8(w0, z);
-    __m128i x1 = _mm_unpacklo_epi8(w1, z);
-    __m128i x2 = _mm_unpacklo_epi8(w2, z);
-
-    a.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(x0, z));
-    b.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(x1, z));
-    c.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(x2, z));
-    d.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(x0, z));
-    e.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(x1, z));
-    f.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(x2, z));
-#else
-    __m128i v0 = _mm_unpacklo_epi8(u0, z);
-    __m128i v1 = _mm_unpackhi_epi8(u0, z);
-    __m128i v2 = _mm_unpacklo_epi8(u1, z);
-
-    a.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v0, z));
-    b.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v0, z));
-    c.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v1, z));
-    d.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v1, z));
-    e.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v2, z));
-    f.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v2, z));
-
-    v_deinterleave(a, b, c);
-    v_deinterleave(d, e, f);
-#endif
-}
-
-inline void v_load_deinterleave_expand(const uchar* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c, v_float32x4& d,
-                                       v_float32x4& e, v_float32x4& f, v_float32x4& g, v_float32x4& h)
-{
-    __m128i u0 = _mm_loadu_si128((const __m128i*) ptr      );
-    __m128i u1 = _mm_loadu_si128((const __m128i*)(ptr + 16));
-
-    __m128i v0 = _mm_unpacklo_epi8(u0, u1);
-    __m128i v1 = _mm_unpackhi_epi8(u0, u1);
-
-    __m128i w0 = _mm_unpacklo_epi8(v0, v1);
-    __m128i w1 = _mm_unpackhi_epi8(v0, v1);
-
-    __m128i x0 = _mm_unpacklo_epi8(w0, w1);
-    __m128i x1 = _mm_unpackhi_epi8(w0, w1);
-
-    __m128i z = _mm_setzero_si128();
-
-    __m128i y0 = _mm_unpacklo_epi8(x0, z);
-    __m128i y1 = _mm_unpackhi_epi8(x0, z);
-    __m128i y2 = _mm_unpacklo_epi8(x1, z);
-    __m128i y3 = _mm_unpackhi_epi8(x1, z);
-
-    a.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(y0, z));
-    b.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(y1, z));
-    c.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(y2, z));
-    d.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(y3, z));
-    e.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(y0, z));
-    f.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(y1, z));
-    g.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(y2, z));
-    h.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(y3, z));
 }
 
 inline void v_store_interleave(short* ptr, const v_int16x8& a, const v_int16x8& b)
@@ -1934,46 +1860,39 @@ inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32
     _mm_storeu_ps((ptr + 4), u1);
 }
 
-inline void v_interleave(const v_float32x4& v_src0, const v_float32x4& v_src1, const v_float32x4& v_src2,
-                         v_float32x4& v_dst0, v_float32x4& v_dst1, v_float32x4& v_dst2)
+inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32x4& b, const v_float32x4& c)
 {
-    __m128 u0 = _mm_shuffle_ps(v_src0.val, v_src1.val, _MM_SHUFFLE(0, 0, 0, 0));
-    __m128 u1 = _mm_shuffle_ps(v_src2.val, v_src0.val, _MM_SHUFFLE(1, 1, 0, 0));
-    __m128 u2 = _mm_shuffle_ps(v_src1.val, v_src2.val, _MM_SHUFFLE(1, 1, 1, 1));
-    __m128 u3 = _mm_shuffle_ps(v_src0.val, v_src1.val, _MM_SHUFFLE(2, 2, 2, 2));
-    __m128 u4 = _mm_shuffle_ps(v_src2.val, v_src0.val, _MM_SHUFFLE(3, 3, 2, 2));
-    __m128 u5 = _mm_shuffle_ps(v_src1.val, v_src2.val, _MM_SHUFFLE(3, 3, 3, 3));
+    __m128 u0 = _mm_shuffle_ps(a.val, b.val, _MM_SHUFFLE(0, 0, 0, 0));
+    __m128 u1 = _mm_shuffle_ps(c.val, a.val, _MM_SHUFFLE(1, 1, 0, 0));
+    __m128 v0 = _mm_shuffle_ps(u0, u1, _MM_SHUFFLE(2, 0, 2, 0));
+    __m128 u2 = _mm_shuffle_ps(b.val, c.val, _MM_SHUFFLE(1, 1, 1, 1));
+    __m128 u3 = _mm_shuffle_ps(a.val, b.val, _MM_SHUFFLE(2, 2, 2, 2));
+    __m128 v1 = _mm_shuffle_ps(u2, u3, _MM_SHUFFLE(2, 0, 2, 0));
+    __m128 u4 = _mm_shuffle_ps(c.val, a.val, _MM_SHUFFLE(3, 3, 2, 2));
+    __m128 u5 = _mm_shuffle_ps(b.val, c.val, _MM_SHUFFLE(3, 3, 3, 3));
+    __m128 v2 = _mm_shuffle_ps(u4, u5, _MM_SHUFFLE(2, 0, 2, 0));
 
-    v_dst0.val = _mm_shuffle_ps(u0, u1, _MM_SHUFFLE(2, 0, 2, 0));
-    v_dst1.val = _mm_shuffle_ps(u2, u3, _MM_SHUFFLE(2, 0, 2, 0));
-    v_dst2.val = _mm_shuffle_ps(u4, u5, _MM_SHUFFLE(2, 0, 2, 0));
+    _mm_storeu_ps(ptr + 0, v0);
+    _mm_storeu_ps(ptr + 4, v1);
+    _mm_storeu_ps(ptr + 8, v2);
 }
 
-inline void v_store_interleave(float* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1, const v_float32x4& v_src2)
+inline void v_store_interleave(float* ptr, const v_float32x4& a, const v_float32x4& b,
+                               const v_float32x4& c, const v_float32x4& d)
 {
-    v_float32x4 v_src3;
-    v_float32x4 v_src4;
-    v_float32x4 v_src5;
-    v_interleave(v_src0, v_src1, v_src2, v_src3, v_src4, v_src5);
+    __m128 u0 = _mm_unpacklo_ps(a.val, c.val);
+    __m128 u1 = _mm_unpacklo_ps(b.val, d.val);
+    __m128 u2 = _mm_unpackhi_ps(a.val, c.val);
+    __m128 u3 = _mm_unpackhi_ps(b.val, d.val);
+    __m128 v0 = _mm_unpacklo_ps(u0, u1);
+    __m128 v2 = _mm_unpacklo_ps(u2, u3);
+    __m128 v1 = _mm_unpackhi_ps(u0, u1);
+    __m128 v3 = _mm_unpackhi_ps(u2, u3);
 
-    _mm_storeu_ps(ptr + 0, v_src0.val);
-    _mm_storeu_ps(ptr + 4, v_src1.val);
-    _mm_storeu_ps(ptr + 8, v_src2.val);
-}
-
-inline void v_store_interleave(float* ptr, const v_float32x4& src0, const v_float32x4& src1,
-                               const v_float32x4& src2, const v_float32x4& src3)
-{
-    v_float32x4 v_src0(src0);
-    v_float32x4 v_src1(src1);
-    v_float32x4 v_src2(src2);
-    v_float32x4 v_src3(src3);
-    v_transpose4x4(src0, src1, src2, src3, v_src0, v_src1, v_src2, v_src3);
-
-    _mm_storeu_ps(ptr +  0, v_src0.val);
-    _mm_storeu_ps(ptr +  4, v_src1.val);
-    _mm_storeu_ps(ptr +  8, v_src2.val);
-    _mm_storeu_ps(ptr + 12, v_src3.val);
+    _mm_storeu_ps(ptr +  0, v0);
+    _mm_storeu_ps(ptr +  4, v1);
+    _mm_storeu_ps(ptr +  8, v2);
+    _mm_storeu_ps(ptr + 12, v3);
 }
 
 inline void v_store_interleave(uint64 *ptr, const v_uint64x2& a, const v_uint64x2& b, const v_uint64x2& c)
@@ -1995,56 +1914,6 @@ inline void v_store_interleave(int64 *ptr, const v_int64x2& a, const v_int64x2& 
 inline void v_store_interleave(double *ptr, const v_float64x2& a, const v_float64x2& b, const v_float64x2& c)
 {
     v_store_interleave((uint64*)ptr, v_reinterpret_as_u64(a), v_reinterpret_as_u64(b), v_reinterpret_as_u64(c));
-}
-
-inline void v_pack_interleave_store(uchar* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1, const v_float32x4& v_src2,
-                                    const v_float32x4& v_src3, const v_float32x4& v_src4, const v_float32x4& v_src5) {
-#if CV_SSSE3
-    __m128i dst02 = _mm_packs_epi32(_mm_cvtps_epi32(v_src[0].val), _mm_cvtps_epi32(v_src[2].val));
-    __m128i dst44 = _mm_packs_epi32(_mm_cvtps_epi32(v_src[4].val), _mm_cvtps_epi32(v_src[4].val));
-    __m128i dst13 = _mm_packs_epi32(_mm_cvtps_epi32(v_src[1].val), _mm_cvtps_epi32(v_src[3].val));
-    __m128i dst55 = _mm_packs_epi32(_mm_cvtps_epi32(v_src[5].val), _mm_cvtps_epi32(v_src[5].val));
-    __m128i dst0244 = _mm_packus_epi16(dst02, dst44);
-    __m128i dst1355 = _mm_packus_epi16(dst13, dst55);
-
-    __m128i v0 = _mm_shuffle_epi8(dst0244, 0x0b07030a060209050108040080808080);
-    __m128i v1 = _mm_shuffle_epi8(dst1355, 0x808080800b07030a0602090501080400);
-
-    __m128i dst0123 = _mm_aligner_epi8(v0, v1, 4);
-    __m128i dst4545 = _mm_aligner_epi8(v1, v1, 4);
-#else
-    v_float32x4 v_dst[6];
-    v_interleave(v_src0, v_src1, v_src2, v_dst[0], v_dst[1], v_dst[2]);
-    v_interleave(v_src3, v_src4, v_src5, v_dst[3], v_dst[4], v_dst[5]);
-    __m128i dst01 = _mm_packs_epi32(_mm_cvtps_epi32(v_dst[0].val), _mm_cvtps_epi32(v_dst[1].val));
-    __m128i dst23 = _mm_packs_epi32(_mm_cvtps_epi32(v_dst[2].val), _mm_cvtps_epi32(v_dst[3].val));
-    __m128i dst45 = _mm_packs_epi32(_mm_cvtps_epi32(v_dst[4].val), _mm_cvtps_epi32(v_dst[5].val));
-    __m128i dst0123 = _mm_packus_epi16(dst01, dst23);
-    __m128i dst4545 = _mm_packus_epi16(dst45, dst45);
-#else
-
-    _mm_storeu_si128((__m128i*) ptr      , dst0123);
-    _mm_storel_epi64((__m128i*)(ptr + 16), dst4545);
-}
-
-inline void v_pack_interleave_store(uchar* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1,
-                                    const v_float32x4& v_src2, const v_float32x4& v_src3, const v_float32x4& v_src4,
-                                    const v_float32x4& v_src5, const v_float32x4& v_src6, const v_float32x4& v_src7) {
-    __m128i src01 = _mm_packs_epi32(_mm_castps_si128(v_src0.val), _mm_castps_si128(v_src1.val));
-    __m128i src23 = _mm_packs_epi32(_mm_castps_si128(v_src2.val), _mm_castps_si128(v_src3.val));
-    __m128i src45 = _mm_packs_epi32(_mm_castps_si128(v_src4.val), _mm_castps_si128(v_src5.val));
-    __m128i src67 = _mm_packs_epi32(_mm_castps_si128(v_src6.val), _mm_castps_si128(v_src7.val));
-    __m128i src0123 = _mm_packus_epi16(src01, src23);
-    __m128i src4567 = _mm_packus_epi16(src45, src67);
-
-    __m128i u0 = _mm_unpacklo_epi8(src0123, src4567);
-    __m128i u1 = _mm_unpackhi_epi8(src0123, src4567);
-
-    __m128i v0 = _mm_unpacklo_epi8(u0, u1);
-    __m128i v1 = _mm_unpackhi_epi8(u0, u1);
-
-    _mm_storeu_si128((__m128i*) ptr      , v0);
-    _mm_storeu_si128((__m128i*)(ptr + 16), v1);
 }
 
 #define OPENCV_HAL_IMPL_SSE_LOADSTORE_INTERLEAVE(_Tpvec, _Tp, suffix, _Tpuvec, _Tpu, usuffix) \
