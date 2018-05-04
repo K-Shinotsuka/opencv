@@ -338,7 +338,7 @@ struct HSV2RGB_b
                     {
                         v_float32x4 v_src[6];
                         process_simd(src + j, v_src);
-                        v_interleave_pack_store(dst, v_src[blueIdx], v_src[1], v_src[blueIdx^2],
+                        v_pack_interleave_store(dst, v_src[blueIdx], v_src[1], v_src[blueIdx^2],
                                                 v_src[3 + blueIdx], v_src[4], v_src[3 + (blueIdx^2)]);
                     }
                     for( ; j < dn*3; j += 3, dst += dcn )
@@ -356,7 +356,7 @@ struct HSV2RGB_b
                         process_simd(src + j, v_src);
                         v_float32x4 v_alpha;
                         v_alpha = v_setall_f32(alpha);
-                        v_interleave_pack_store(dst, v_src[blueIdx], v_src[1], v_src[blueIdx^2], v_alpha,
+                        v_pack_interleave_store(dst, v_src[blueIdx], v_src[1], v_src[blueIdx^2], v_alpha,
                                                 v_src[3 + blueIdx], v_src[4], v_src[3 + (blueIdx^2)], v_alpha);
                     }
                     for( ; j < dn*3; j += 3, dst += dcn )

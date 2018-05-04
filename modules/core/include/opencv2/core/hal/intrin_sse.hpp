@@ -1674,23 +1674,47 @@ inline void v_load_deinterleave(const ushort*ptr, v_uint16x8& a, v_uint16x8& b)
 inline void v_load_deinterleave_expand(const uchar* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c,
                                        v_float32x4& d, v_float32x4& e, v_float32x4& f)
 {
-    __m128i z = _mm_setzero_si128();
     __m128i u0 = _mm_loadu_si128((const __m128i*) ptr      );
     __m128i u1 = _mm_loadl_epi64((const __m128i*)(ptr + 16));
 
+    __m128i z = _mm_setzero_si128();
+#if CV_SSSE3
+    __m128i v0 = _mm_shuffle_epi8(u0, 0x0f0c0906030080808080808080808080);
+    __m128i v1 = _mm_shuffle_epi8(u1, 0x80808080808080808080808080800502);
+    __m128i v2 = _mm_shuffle_epi8(u0, 0x0d0a0704018080808080808080808080);
+    __m128i v3 = _mm_shuffle_epi8(u1, 0x80808080808080808080808080060300);
+    __m128i v4 = _mm_shuffle_epi8(u0, 0x0e0b0805028080808080808080808080);
+    __m128i v5 = _mm_shuffle_epi8(u1, 0x80808080808080808080808080070401);
+
+    __m128i w0 = _mm_aligner_epi8(v0, v1, 10);
+    __m128i w1 = _mm_aligner_epi8(v2, v3, 11);
+    __m128i w2 = _mm_aligner_epi8(v4, v5, 11);
+
+    __m128i x0 = _mm_unpacklo_epi8(w0, z);
+    __m128i x1 = _mm_unpacklo_epi8(w1, z);
+    __m128i x2 = _mm_unpacklo_epi8(w2, z);
+
+    a.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(x0, z));
+    b.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(x1, z));
+    c.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(x2, z));
+    d.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(x0, z));
+    e.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(x1, z));
+    f.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(x2, z));
+#else
     __m128i v0 = _mm_unpacklo_epi8(u0, z);
     __m128i v1 = _mm_unpackhi_epi8(u0, z);
     __m128i v2 = _mm_unpacklo_epi8(u1, z);
 
-    a.val = _mm_castsi128_ps(_mm_unpacklo_epi16(v0, z));
-    b.val = _mm_castsi128_ps(_mm_unpackhi_epi16(v0, z));
-    c.val = _mm_castsi128_ps(_mm_unpacklo_epi16(v1, z));
-    d.val = _mm_castsi128_ps(_mm_unpackhi_epi16(v1, z));
-    e.val = _mm_castsi128_ps(_mm_unpacklo_epi16(v2, z));
-    f.val = _mm_castsi128_ps(_mm_unpackhi_epi16(v2, z));
+    a.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v0, z));
+    b.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v0, z));
+    c.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v1, z));
+    d.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v1, z));
+    e.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(v2, z));
+    f.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(v2, z));
 
     v_deinterleave(a, b, c);
     v_deinterleave(d, e, f);
+#endif
 }
 
 inline void v_load_deinterleave_expand(const uchar* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c, v_float32x4& d,
@@ -1710,19 +1734,19 @@ inline void v_load_deinterleave_expand(const uchar* ptr, v_float32x4& a, v_float
 
     __m128i z = _mm_setzero_si128();
 
-    __m128i y1 = _mm_unpackhi_epi8(x0, z);
     __m128i y0 = _mm_unpacklo_epi8(x0, z);
-    __m128i y3 = _mm_unpackhi_epi8(x1, z);
+    __m128i y1 = _mm_unpackhi_epi8(x0, z);
     __m128i y2 = _mm_unpacklo_epi8(x1, z);
+    __m128i y3 = _mm_unpackhi_epi8(x1, z);
 
-    a.val = _mm_castsi128_ps(_mm_unpacklo_epi16(y0, z));
-    b.val = _mm_castsi128_ps(_mm_unpackhi_epi16(y0, z));
-    c.val = _mm_castsi128_ps(_mm_unpacklo_epi16(y1, z));
-    d.val = _mm_castsi128_ps(_mm_unpackhi_epi16(y1, z));
-    e.val = _mm_castsi128_ps(_mm_unpacklo_epi16(y2, z));
-    f.val = _mm_castsi128_ps(_mm_unpackhi_epi16(y2, z));
-    g.val = _mm_castsi128_ps(_mm_unpacklo_epi16(y3, z));
-    h.val = _mm_castsi128_ps(_mm_unpackhi_epi16(y3, z));
+    a.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(y0, z));
+    b.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(y1, z));
+    c.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(y2, z));
+    d.val = _mm_cvtepi32_ps(_mm_unpacklo_epi16(y3, z));
+    e.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(y0, z));
+    f.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(y1, z));
+    g.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(y2, z));
+    h.val = _mm_cvtepi32_ps(_mm_unpackhi_epi16(y3, z));
 }
 
 inline void v_store_interleave(short* ptr, const v_int16x8& a, const v_int16x8& b)
@@ -1973,22 +1997,37 @@ inline void v_store_interleave(double *ptr, const v_float64x2& a, const v_float6
     v_store_interleave((uint64*)ptr, v_reinterpret_as_u64(a), v_reinterpret_as_u64(b), v_reinterpret_as_u64(c));
 }
 
-inline void v_interleave_pack_store(uchar* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1, const v_float32x4& v_src2,
+inline void v_pack_interleave_store(uchar* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1, const v_float32x4& v_src2,
                                     const v_float32x4& v_src3, const v_float32x4& v_src4, const v_float32x4& v_src5) {
+#if CV_SSSE3
+    __m128i dst02 = _mm_packs_epi32(_mm_cvtps_epi32(v_src[0].val), _mm_cvtps_epi32(v_src[2].val));
+    __m128i dst44 = _mm_packs_epi32(_mm_cvtps_epi32(v_src[4].val), _mm_cvtps_epi32(v_src[4].val));
+    __m128i dst13 = _mm_packs_epi32(_mm_cvtps_epi32(v_src[1].val), _mm_cvtps_epi32(v_src[3].val));
+    __m128i dst55 = _mm_packs_epi32(_mm_cvtps_epi32(v_src[5].val), _mm_cvtps_epi32(v_src[5].val));
+    __m128i dst0244 = _mm_packus_epi16(dst02, dst44);
+    __m128i dst1355 = _mm_packus_epi16(dst13, dst55);
+
+    __m128i v0 = _mm_shuffle_epi8(dst0244, 0x0b07030a060209050108040080808080);
+    __m128i v1 = _mm_shuffle_epi8(dst1355, 0x808080800b07030a0602090501080400);
+
+    __m128i dst0123 = _mm_aligner_epi8(v0, v1, 4);
+    __m128i dst4545 = _mm_aligner_epi8(v1, v1, 4);
+#else
     v_float32x4 v_dst[6];
     v_interleave(v_src0, v_src1, v_src2, v_dst[0], v_dst[1], v_dst[2]);
     v_interleave(v_src3, v_src4, v_src5, v_dst[3], v_dst[4], v_dst[5]);
-    __m128i dst01 = _mm_packs_epi32(_mm_castps_si128(v_dst[0].val), _mm_castps_si128(v_dst[1].val));
-    __m128i dst23 = _mm_packs_epi32(_mm_castps_si128(v_dst[2].val), _mm_castps_si128(v_dst[3].val));
-    __m128i dst45 = _mm_packs_epi32(_mm_castps_si128(v_dst[4].val), _mm_castps_si128(v_dst[5].val));
+    __m128i dst01 = _mm_packs_epi32(_mm_cvtps_epi32(v_dst[0].val), _mm_cvtps_epi32(v_dst[1].val));
+    __m128i dst23 = _mm_packs_epi32(_mm_cvtps_epi32(v_dst[2].val), _mm_cvtps_epi32(v_dst[3].val));
+    __m128i dst45 = _mm_packs_epi32(_mm_cvtps_epi32(v_dst[4].val), _mm_cvtps_epi32(v_dst[5].val));
     __m128i dst0123 = _mm_packus_epi16(dst01, dst23);
     __m128i dst4545 = _mm_packus_epi16(dst45, dst45);
+#else
 
     _mm_storeu_si128((__m128i*) ptr      , dst0123);
     _mm_storel_epi64((__m128i*)(ptr + 16), dst4545);
 }
 
-inline void v_interleave_pack_store(uchar* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1,
+inline void v_pack_interleave_store(uchar* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1,
                                     const v_float32x4& v_src2, const v_float32x4& v_src3, const v_float32x4& v_src4,
                                     const v_float32x4& v_src5, const v_float32x4& v_src6, const v_float32x4& v_src7) {
     __m128i src01 = _mm_packs_epi32(_mm_castps_si128(v_src0.val), _mm_castps_si128(v_src1.val));

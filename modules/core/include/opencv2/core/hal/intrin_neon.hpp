@@ -1251,75 +1251,102 @@ inline void v_store_interleave( _Tp* ptr, const v_##_Tpvec& a, const v_##_Tpvec&
     vst4q_##suffix(ptr, v); \
 }
 
-inline void v_load_deinterleave_expand(const uchar* ptr, v_uint32x4& a, v_uint32x4& b, v_uint32x4& c,
-                                       v_uint32x4& d, v_uint32x4& e, v_uint32x4& f)
+inline void v_load_deinterleave_expand(const uchar* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c,
+                                       v_float32x4& d, v_float32x4& e, v_float32x4& f)
 {
     uint8x8x3_t v = vld3_u8(*(unsigned*)ptr);
 
-    v_uint16x8 tmp[6];
-    v_expand(v.val[0], tmp[0], tmp[1]);
-    v_expand(v.val[1], tmp[2], tmp[3]);
-    v_expand(v.val[2], tmp[4], tmp[5]);
+    v_uint16x8 tmp1[3];
+    tmp[0] = vmovl_u8(vget_low_u8(v.val[0]));
+    tmp[1] = vmovl_u8(vget_low_u8(v.val[1]));
+    tmp[2] = vmovl_u8(vget_low_u8(v.val[2]));
 
-    v_expand(tmp[0], a, b);
-    v_expand(tmp[2], c, d);
-    v_expand(tmp[4], e, f);
+    v_uint32x4 tmp2[6];
+    v_expand(tmp[0], tmp2[0], tmp2[3]);
+    v_expand(tmp[1], tmp2[1], tmp2[4]);
+    v_expand(tmp[2], tmp2[2], tmp2[5]);
+
+    a = v_float32x4(vcvtq_f32_s32(tmp2[0]));
+    b = v_float32x4(vcvtq_f32_s32(tmp2[1]));
+    c = v_float32x4(vcvtq_f32_s32(tmp2[2]));
+    d = v_float32x4(vcvtq_f32_s32(tmp2[3]));
+    e = v_float32x4(vcvtq_f32_s32(tmp2[4]));
+    f = v_float32x4(vcvtq_f32_s32(tmp2[5]));
 }
 
-inline void v_load_deinterleave_expand(const uchar* ptr, v_uint32x4& a, v_uint32x4& b, v_uint32x4& c, v_uint32x4& d,
-                                       v_uint32x4& e, v_uint32x4& f, v_uint32x4& g, v_uint32x4& h)
+inline void v_load_deinterleave_expand(const uchar* ptr, v_float32x4& a, v_float32x4& b, v_float32x4& c, v_float32x4& d,
+                                       v_float32x4& e, v_float32x4& f, v_float32x4& g, v_float32x4& h)
 {
-    uint8x8x4_t v = vld4_u8(*(unsigned*)ptr);
+    float8x8x4_t v = vld4_u8(*(unsigned*)ptr);
 
-    v_uint16x8 tmp[8];
-    v_expand(v.val[0], tmp[0], tmp[1]);
-    v_expand(v.val[1], tmp[2], tmp[3]);
-    v_expand(v.val[2], tmp[4], tmp[5]);
-    v_expand(v.val[3], tmp[6], tmp[7]);
+    uint16x8 tmp1[4];
+    tmp[0] = vmovl_u8(vget_low_u8(v.val[0]));
+    tmp[1] = vmovl_u8(vget_low_u8(v.val[1]));
+    tmp[2] = vmovl_u8(vget_low_u8(v.val[2]));
+    tmp[3] = vmovl_u8(vget_low_u8(v.val[3]));
 
-    v_expand(tmp[0], a, b);
-    v_expand(tmp[2], c, d);
-    v_expand(tmp[4], e, f);
-    v_expand(tmp[6], g, h);
+    uint32x4 tmp2[8];
+    v_expand(tmp[0], tmp2[0], tmp2[4]);
+    v_expand(tmp[1], tmp2[1], tmp2[5]);
+    v_expand(tmp[2], tmp2[2], tmp2[6]);
+    v_expand(tmp[3], tmp2[3], tmp2[7]);
+
+    a = v_float32x4(vcvtq_f32_s32(tmp2[0]));
+    b = v_float32x4(vcvtq_f32_s32(tmp2[1]));
+    c = v_float32x4(vcvtq_f32_s32(tmp2[2]));
+    d = v_float32x4(vcvtq_f32_s32(tmp2[3]));
+    e = v_float32x4(vcvtq_f32_s32(tmp2[4]));
+    f = v_float32x4(vcvtq_f32_s32(tmp2[5]));
+    g = v_float32x4(vcvtq_f32_s32(tmp2[6]));
+    h = v_float32x4(vcvtq_f32_s32(tmp2[7]));
 }
 
-inline void v_pack_interleave_store(uchar* ptr, const v_uint32x4& v_src0, const v_uint32x4& v_src1, const v_uint32x4& v_src2,
-                                    const v_uint32x4& v_src3, const v_uint32x4& v_src4, const v_uint32x4& v_src5)
+inline void v_pack_interleave_store(uchar* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1, const v_float32x4& v_src2,
+                                    const v_float32x4& v_src3, const v_float32x4& v_src4, const v_float32x4& v_src5)
 {
-    v_uint16x8 v_src01 = v_u32pack(v_src0, v_src1);
-    v_uint16x8 v_src23 = v_u32pack(v_src2, v_src3);
-    v_uint16x8 v_src45 = v_u32pack(v_src4, v_src5);
+    uint32x4 src[6];
+    src[0] = vcvtq_s32_f32(v_src0.val);
+    src[1] = vcvtq_s32_f32(v_src1.val);
+    src[2] = vcvtq_s32_f32(v_src2.val);
+    src[3] = vcvtq_s32_f32(v_src3.val);
+    src[4] = vcvtq_s32_f32(v_src4.val);
+    src[5] = vcvtq_s32_f32(v_src5.val);
 
-    v_uint8x8 v_src0101 = v_u16pack(v_src01, v_src01);
-    v_uint8x8 v_src2323 = v_u16pack(v_src23, v_src23);
-    v_uint8x8 v_src4523 = v_u16pack(v_src45, v_src45);
+    uint16x8 src03 = v_u32pack(v_src0, v_src3);
+    uint16x8 src14 = v_u32pack(v_src1, v_src4);
+    uint16x8 src25 = v_u32pack(v_src2, v_src5);
 
-    uint8x8x3_t v;
-    v.val[0] = v_src0101.val;
-    v.val[1] = v_src2323.val;
-    v.val[2] = v_src4545.val;
+    float8x8x3_t v;
+    v.val[0] = v_u16pack(src03);
+    v.val[1] = v_u16pack(src14);
+    v.val[2] = v_u16pack(src25);
     vst3_u8(ptr, v);
 }
 
-inline void v_pack_interleave_store(uchar* ptr, const v_uint32x4& v_src0, const v_uint32x4& v_src1,
-                                    const v_uint32x4& v_src2, const v_uint32x4& v_src3, const v_uint32x4& v_src4,
-                                    const v_uint32x4& v_src5, const v_uint32x4& v_src6, const v_uint32x4& v_src7)
+inline void v_pack_interleave_store(uchar* ptr, const v_float32x4& v_src0, const v_float32x4& v_src1,
+                                    const v_float32x4& v_src2, const v_float32x4& v_src3, const v_float32x4& v_src4,
+                                    const v_float32x4& v_src5, const v_float32x4& v_src6, const v_float32x4& v_src7)
 {
-    v_uint16x8 v_src01 = v_u32pack(v_src0, v_src1);
-    v_uint16x8 v_src23 = v_u32pack(v_src2, v_src3);
-    v_uint16x8 v_src45 = v_u32pack(v_src4, v_src5);
-    v_uint16x8 v_src67 = v_u32pack(v_src6, v_src7);
+    uint32x4 src[8];
+    src[0] = vcvtq_s32_f32(v_src0.val);
+    src[1] = vcvtq_s32_f32(v_src1.val);
+    src[2] = vcvtq_s32_f32(v_src2.val);
+    src[3] = vcvtq_s32_f32(v_src3.val);
+    src[4] = vcvtq_s32_f32(v_src4.val);
+    src[5] = vcvtq_s32_f32(v_src5.val);
+    src[6] = vcvtq_s32_f32(v_src6.val);
+    src[7] = vcvtq_s32_f32(v_src7.val);
 
-    v_uint8x8 v_src0101 = v_u16pack(v_src01, v_src01);
-    v_uint8x8 v_src2323 = v_u16pack(v_src23, v_src23);
-    v_uint8x8 v_src4545 = v_u16pack(v_src45, v_src45);
-    v_uint8x8 v_src6767 = v_u16pack(v_src67, v_src67);
+    uint16x8 src04 = v_u32pack(v_src0, v_src4);
+    uint16x8 src15 = v_u32pack(v_src1, v_src5);
+    uint16x8 src26 = v_u32pack(v_src2, v_src6);
+    uint16x8 src37 = v_u32pack(v_src3, v_src7);
 
-    uint8x8x4_t v;
-    v.val[0] = v_src0101.val;
-    v.val[1] = v_src2323.val;
-    v.val[2] = v_src4545.val;
-    v.val[3] = v_src6767.val;
+    float8x8x4_t v;
+    v.val[0] = v_u16pack(src04);
+    v.val[1] = v_u16pack(src15);
+    v.val[2] = v_u16pack(src26);
+    v.val[3] = v_u16pack(src37);
     vst4_u8(ptr, v);
 }
 
